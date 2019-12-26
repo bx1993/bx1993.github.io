@@ -1,7 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>第一篇博文</title>
+    <title>利用google map API和python脚本获取超高精度地形数据</title>
+    <url>/2019/12/26/%E5%88%A9%E7%94%A8google-map-API%E5%92%8Cpython%E8%84%9A%E6%9C%AC%E8%8E%B7%E5%8F%96%E8%B6%85%E9%AB%98%E7%B2%BE%E5%BA%A6%E5%9C%B0%E5%BD%A2%E6%95%B0%E6%8D%AE/</url>
+    <content><![CDATA[<p>这学期的设计课涉及到了高速公路，铁路等一系列交通基础设施。我的设计范围内既有架起的高速，又有下陷的高速，铁路也在不同的标高上，外加自然的地形起伏，整个基地的高度变化十分丰富。所以需要很高精度（精确到米级的）的地形数据来进行一系列建模和分析。</p>
+<p>先是尝试在“地理空间数据云”这个网站寻找。这个网站提供GDEMEDM 30M的分辨率的数字高程数据，按照经纬度条带号来检索。这个数据对于我而言有两大短处：（1）数据精度不够。在详细设计中2m的高差已经很了不得了，这个数据的精度完全达不到这个要求（2）按照经纬度条带号下载的数据范围极大。在如此巨大的范围中极难准确定位自己的基地。</p>
+<p>联想到谷歌地图的移动端有地形的显示<br><img src="http://q322scjdb.bkt.clouddn.com/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20191226151122.jpg" alt="google地形显示"><br>所以想到谷歌地图可能提供了比较详细的高程数据。</p>
+<p>上网一搜，果不其然，谷歌地图提供了Google Maps Elevation API，可以非常方便地获取指定范围内的地形数据。</p>
+<p>下面简单说一下怎么做。</p>
+<hr>
+<p>第一步你需要一个gmail,也就是谷歌的账号（这一步就会难倒国内大部分人==）</p>
+<p>第二步：登陆<a href="https://console.cloud.google.com/appengine，利用自己的账号去创建appid,每个谷歌账号可以创建多个appid,有了这些appid之后，你可以为每个id申请不同的api密钥。或者直接登陆：https://developers.google.com/maps/documentation/elevation/intro?hl=zh-cn" target="_blank" rel="noopener">https://console.cloud.google.com/appengine，利用自己的账号去创建appid,每个谷歌账号可以创建多个appid,有了这些appid之后，你可以为每个id申请不同的api密钥。或者直接登陆：https://developers.google.com/maps/documentation/elevation/intro?hl=zh-cn</a><br>点击“获取密钥”<br><img src="http://q322scjdb.bkt.clouddn.com/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20191226151135.jpg" alt=""><br>每个密钥每天2500次免费请求，每次请求最多512个位置。每个人拥有的密钥上限不确定（多年前我为了用gogent翻墙，申请了12个appid，所以应该可以有12个密钥）。</p>
+<p>第三步：向谷歌发送请求，谷歌返回高程值。<br>引用一个谷歌官方开发文档的说明：</p>
+<blockquote>
+<p>下例请求以 JSON 格式返回科罗拉多州“里高城”丹佛的海拔高度：<a href="https://maps.googleapis.com/maps/api/elevation/json/locations=39.7391536,-104.9847034&amp;key=YOUR_API_KEY" target="_blank" rel="noopener">https://maps.googleapis.com/maps/api/elevation/json/locations=39.7391536,-104.9847034&amp;key=YOUR_API_KEY</a></p>
+</blockquote>
+<p>这个api要求的参数不多，简单点来说就你你给他一个标准的经纬度，他就以json的格式给你返回高程。</p>
+<p>不会写代码？没关系，网上早就有大神帮我们写好了！大家复制—粘贴—运行即可：）</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">import googlemaps</span><br><span class="line"></span><br><span class="line">import numpy as np</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">def request_elevation(xmin, xmax, xinc, ymin, ymax, yinc, maxnum&#x3D;512):</span><br><span class="line"></span><br><span class="line">    xlist &#x3D; np.arange(xmin, xmax, xinc)</span><br><span class="line"></span><br><span class="line">    ylist &#x3D; np.arange(ymin, ymax, yinc)</span><br><span class="line"></span><br><span class="line">    points &#x3D; [(y, x) for y in ylist for x in xlist]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    requestnum &#x3D; int(np.floor(len(points) &#x2F; maxnum) + 1)</span><br><span class="line"></span><br><span class="line">    npoints &#x3D; np.array_split(points, requestnum)</span><br><span class="line"></span><br><span class="line">    if requestnum &gt; 2500:</span><br><span class="line"></span><br><span class="line">        print(&quot;Error: Request number exceed! Change grid or region.&quot;)</span><br><span class="line"></span><br><span class="line">    return [gmaps.elevation(locations&#x3D;loc.tolist()) for loc in npoints]</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">xmin, xmax, xinc &#x3D; 7.720972, 7.740003, 0.0001</span><br><span class="line"></span><br><span class="line">ymin, ymax, yinc &#x3D; 48.579339, 48.591174, 0.0001</span><br><span class="line"></span><br><span class="line">gmaps &#x3D; googlemaps.Client(key&#x3D;&#39;AIzaSyC37qhvBNXp4Y3u-hBrITP-kooJx_Unidc&#39;)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># Generate all locations</span><br><span class="line"></span><br><span class="line">elevations &#x3D; request_elevation(xmin, xmax, xinc, ymin, ymax, yinc)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"># output data with format &#96;longitude   latitude elevation resolution&#96;</span><br><span class="line"></span><br><span class="line">with open(&quot;Elevations.dat&quot;, &quot;w&quot;) as f:</span><br><span class="line"></span><br><span class="line">    for loclist in elevations:</span><br><span class="line"></span><br><span class="line">        for subloc in loclist:</span><br><span class="line"></span><br><span class="line">            outputstr &#x3D; &quot;&#123;:.5f&#125;  &#123;:.5f&#125;  &#123;:.5f&#125;  &#123;:.5f&#125;\n&quot;.format(</span><br><span class="line"></span><br><span class="line">                subloc[&#39;location&#39;][&#39;lng&#39;],</span><br><span class="line"></span><br><span class="line">                subloc[&#39;location&#39;][&#39;lat&#39;],</span><br><span class="line"></span><br><span class="line">                subloc[&#39;elevation&#39;],</span><br><span class="line"></span><br><span class="line">                subloc[&#39;resolution&#39;])</span><br><span class="line"></span><br><span class="line">            f.writelines(outputstr)</span><br></pre></td></tr></table></figure>
+<p>以上代码来自“GMT中文社区”，作者SeisPider。</p>
+<p>在我看来，这个代码的机智之处在于他在一次请求里塞了512个位置。这样充分利用2500次请求的话，就有128万个位置。这么多位置可以构成一个相当可观的面积。<br>需要注意的是，谷歌地图接受的是经纬度坐标，而我们做设计的有的时候更需精确的距离。比如这个地方我需要每隔5米选一个点来测量高程，这个时候就会涉及到一个经纬度和米之间的换算，简单来说：经纬度偏差0.00001度相当于偏差1米（代码里的函数里有参数，可以修改）<br>运行上述代码成功的话会产生一个.dat的文件，获得的数据如图：<br><img src="http://q322scjdb.bkt.clouddn.com/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20191226151138.jpg" alt="获得数据样例"><br>第一列经度，第二列纬度，第三列获得的高程，第四列点与点之间的距离。我们看一下第三列的数据精度，我只能说：鹅妹子嘤！！！</p>
+<p>将上述数据导入GIS可视化<br><img src="http://q322scjdb.bkt.clouddn.com/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20191226151141.jpg" alt=""><br>（红色代表高的地方，绿色代表低的地方，蓝色的线是高架，灰色的线是铁路）</p>
+<p>低于地面的高速公路和高于地面的高速公路和自然的坡地的地形变化，一目了然！</p>
+<p>有了这些精度的数据，我就能对这些场地做更加复杂的竖向设计，而不是把他当成一个平地来设计了。</p>
+<p>收集基地的数据只是设计过程中必要的一小步，真正难的地方还是我们如何设想这个场地的未来以及如何真正地做一个设计：）<br>最后说一个题外话：）</p>
+<p>去年暑假有邢台市有一场大洪水，非常可怕，很多村民在睡梦之中被夺去了生命。这个事情发生后，关于洪水的起因竟然争执不下。<br><img src="http://q322scjdb.bkt.clouddn.com/%E5%BE%AE%E4%BF%A1%E5%9B%BE%E7%89%87_20191226151144.jpg" alt=""><br>网上各路大神各种分析，说是上游水库泄洪，有人说是附近某条河的锅；当时我就想找那个地区的地形数据做个洪水的淹没分析，结果国内提供的数据精度真的差的根本不能分析。我想如果国内能没有这堵墙或者提高一些数据质量，受益的可不仅仅是我们设计领域的人哦。。。</p>
+<p>（文中提到代码的出处：<a href="http://gmt-china.org/blog/google-maps-elevation-api）" target="_blank" rel="noopener">http://gmt-china.org/blog/google-maps-elevation-api）</a></p>
+]]></content>
+      <categories>
+        <category>技术</category>
+      </categories>
+  </entry>
+  <entry>
+    <title>创站语</title>
     <url>/2019/12/25/%E5%88%9B%E7%AB%99%E8%AF%AD/</url>
     <content><![CDATA[<p>最近工作有点闲，翻了翻几位技术大牛学长的个人网站，觉得在茫茫互联网的大海有个记载自己人生历程的小角落感觉挺好。且个人网站相对于微信公众号收到的监管较弱，可操作性更强，所以就用了一个下午的时间翻阅各种博客，初步搭建了个人网站的雏形。接下来的一段时间，我会努力将个人网站美化，将以前写的文章搬运到个人网站上，希望能持续记录自己的生活和感想吧。等以后稳定下来，就买个自己的域名哈哈！</p>
 ]]></content>
